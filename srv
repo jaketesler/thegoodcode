@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# Written by Jake Tesler (8/15/17)
+
+while getopts hm:r:s:S:i: arg; do
+	case $arg in
+		m)
+			sudo journalctl -n 75 -f -u $OPTARG
+			;;
+		r)
+			sudo systemctl restart $OPTARG
+			;;
+		s)
+			sudo systemctl start $OPTARG
+			;;
+		S)
+			sudo systemctl stop $OPTARG
+			;;
+		i)
+			sudo systemctl status $OPTARG
+			;;
+		\?)
+			echo "Invalid option: -$OPTARG" >&2
+			;;
+	esac
+done
+
+
+# function srv_cmd()
+# {
+# 	while getopts hm:r:s:S:i: arg; do
+# 		case $arg in
+# 			m)
+# 				sudo journalctl -n 75 -f -u $OPTARG
+# 				;;
+# 			r)
+# 				sudo systemctl restart $OPTARG
+# 				;;
+# 			s)
+# 				sudo systemctl start $OPTARG
+# 				;;
+# 			S)
+# 				sudo systemctl stop $OPTARG
+# 				;;
+# 			i)
+# 				sudo systemctl status $OPTARG
+# 				;;
+# 			\?)
+# 				echo "Invalid option: -$OPTARG" >&2
+# 				;;
+# 		esac
+# 	done
+# }
+#
+# function _completion_()
+# {
+# 	SERVICES=$(systemctl list-unit-files -a --no-pager --no-legend | awk '{print $1}')
+# 	COMPREPLY+=($SERVICES)
+# }
+#
+# complete -F _completion_ srv_cmd
