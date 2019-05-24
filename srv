@@ -1,29 +1,87 @@
 #!/bin/bash
 
 # Written by Jake Tesler (8/15/17)
+# Version 2 (5/24/19)
 
-while getopts hm:r:s:S:i: arg; do
+MONITOR=false
+RESTART=false
+STOP=false
+START=false
+SERVICE=""
+SHOULD_EXIT=false
+
+while getopts ":hm:r:s:S:i:" arg; do
+
+	if test "$OPTARG" = "$(eval echo '$'$((OPTIND - 1)))"; then
+        OPTIND=$((OPTIND - 1))
+    fi
+
 	case $arg in
 		m)
-			sudo journalctl -n 75 -f -u $OPTARG
+			MONITOR=true
+			SERVICE="$OPTARG"
 			;;
 		r)
-			sudo systemctl restart $OPTARG
+			RESTART=true
+			SERVICE="$OPTARG"
 			;;
 		s)
-			sudo systemctl start $OPTARG
+			START=true
+			SERVICE="$OPTARG"
 			;;
 		S)
-			sudo systemctl stop $OPTARG
+			STOP=true
+			SERVICE="$OPTARG"
 			;;
 		i)
-			sudo systemctl status $OPTARG
+			STATUS=true
+			SERVICE="$OPTARG"
+			;;
+		h)
+			echo "Usage: srv [-m] [-i] [-r|-s|-S] service"
+			exit 0
 			;;
 		\?)
 			echo "Invalid option: -$OPTARG" >&2
+			SHOULD_EXIT=true
 			;;
 	esac
 done
+
+if [ "$SHOULD_EXIT" = true ]; then exit 0; fi
+
+if test "$SERVICE" = "$(eval echo '$'$((OPTIND - 1)))"; then
+    echo "Please provide a service name."
+    exit 0
+fi
+
+if [ "$RESTART" = true ]; then
+	START=false
+	STOP=false
+	echo "Restarting $SERVICE..."
+	sudo systemctl restart $SERVICE
+fi
+
+if [ "$STOP" = true ]; then
+	echo "Stopping $SERVICE..."
+	sudo systemctl stop $SERVICE
+fi
+
+if [ "$START" = true ]; then
+	echo "Starting $SERVICE..."
+	sudo systemctl start $SERVICE
+fi
+
+if [ "$STATUS" = true ]; then
+	# echo "Gathering status for $SERVICE."
+	sudo systemctl status $SERVICE
+fi
+
+if [ "$MONITOR" = true ]; then
+	# echo "Monitoring $SERVICE."
+	sudo journalctl -n 100 -f -u $SERVICE
+fi
+
 
 
 # function srv_cmd()
