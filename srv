@@ -55,31 +55,42 @@ if test "$SERVICE" = "$(eval echo '$'$((OPTIND - 1)))"; then
     exit 0
 fi
 
-if [ "$RESTART" = true ]; then
-	START=false
-	STOP=false
-	echo "Restarting $SERVICE..."
-	sudo systemctl restart $SERVICE
+SERVICES_LIST=$(systemctl list-unit-files "$SERVICE"* | grep service | awk '{print $1}')
+if [ -z $SERVICES_LIST ]; then
+	exit 0
 fi
 
-if [ "$STOP" = true ]; then
-	echo "Stopping $SERVICE..."
-	sudo systemctl stop $SERVICE
-fi
+for unit in "${SERVICES_LIST[@]}"; do
+	if [ "$RESTART" = true ]; then
+		START=false
+		STOP=false
+		echo "Restarting $unit..."
+		sudo systemctl restart --no-pager $unit
+	fi
 
-if [ "$START" = true ]; then
-	echo "Starting $SERVICE..."
-	sudo systemctl start $SERVICE
-fi
+	if [ "$STOP" = true ]; then
+		echo "Stopping $unit..."
+		sudo systemctl stop --no-pager $unit
+	fi
 
-if [ "$STATUS" = true ]; then
-	# echo "Gathering status for $SERVICE."
-	sudo systemctl status $SERVICE
-fi
+	if [ "$START" = true ]; then
+		echo "Starting $unit..."
+		sudo systemctl start --no-pager $unit
+	fi
+
+	if [ "$STATUS" = true ]; then
+		# echo "Gathering status for $unit."
+		sudo systemctl status --no-pager $unit
+	fi
+done
 
 if [ "$MONITOR" = true ]; then
-	# echo "Monitoring $SERVICE."
-	sudo journalctl -n 100 -f -u $SERVICE
+	if [ "$STATUS" = true ]; then # when status is printed, truncate number of printed lines
+		lines=25
+	else
+		lines=100
+	fi
+	sudo journalctl -n $lines -f -u "$SERVICE"
 fi
 
 
