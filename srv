@@ -78,13 +78,14 @@ fi
 if [ "$SHOW_USAGE"  = true ]; then usage; fi
 if [ "$SHOULD_EXIT" = true ]; then exit 0; fi
 
+# No service provided
 if [ -z "$SERVICE" ] || test "$SERVICE" = "$(eval echo '$'$((OPTIND - 1)))"; then
     printq "Please provide a service name."
     if [ "$QUIET" = false ]; then usage; fi
     exit 0
 fi
 
-SERVICES_LIST=$(systemctl list-unit-files "$SERVICE"* | grep service | awk '{print $1}')
+SERVICES_LIST=$(systemctl list-unit-files | grep "$SERVICE"* | awk '{print $1}')
 if [ -z $SERVICES_LIST ]; then
 	printq "Service $SERVICE could not be found."
 	exit 0
