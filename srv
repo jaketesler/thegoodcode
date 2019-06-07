@@ -8,10 +8,24 @@ RESTART=false
 STOP=false
 START=false
 SERVICE=""
+
 SHOULD_EXIT=false
+SHOW_USAGE=false
+QUIET=false
+RELOAD_REQUESTED=false
 
-while getopts ":hm:r:s:S:i:" arg; do
 
+function printq() {
+	if [ "$QUIET" = false ]; then
+		echo $@
+	fi
+}
+
+function usage() {
+	echo "usage: srv [-l] [-q] [[-m] [-i] [-r|-s|-S] service]"
+}
+
+while getopts ":hm:r:s:S:i:ql" arg; do
 	if test "$OPTARG" = "$(eval echo '$'$((OPTIND - 1)))"; then
         OPTIND=$((OPTIND - 1))
     fi
@@ -37,26 +51,42 @@ while getopts ":hm:r:s:S:i:" arg; do
 			STATUS=true
 			SERVICE="$OPTARG"
 			;;
+		l)
+			RELOAD_REQUESTED=true
+			;;
+		q)
+			QUIET=true
+			;;
 		h)
-			echo "Usage: srv [-m] [-i] [-r|-s|-S] service"
-			exit 0
+			SHOW_USAGE=true
+			SHOULD_EXIT=true
 			;;
 		\?)
 			echo "Invalid option: -$OPTARG" >&2
+			SHOW_USAGE=true
 			SHOULD_EXIT=true
 			;;
 	esac
 done
 
+if [ "$RELOAD_REQUESTED" = true ]; then
+	sudo systemctl daemon-reload
+	printq "Reloading the systemd manager configuration."
+	exit 0
+fi
+
+if [ "$SHOW_USAGE"  = true ]; then usage; fi
 if [ "$SHOULD_EXIT" = true ]; then exit 0; fi
 
-if test "$SERVICE" = "$(eval echo '$'$((OPTIND - 1)))"; then
-    echo "Please provide a service name."
+if [ -z "$SERVICE" ] || test "$SERVICE" = "$(eval echo '$'$((OPTIND - 1)))"; then
+    printq "Please provide a service name."
+    if [ "$QUIET" = false ]; then usage; fi
     exit 0
 fi
 
 SERVICES_LIST=$(systemctl list-unit-files "$SERVICE"* | grep service | awk '{print $1}')
 if [ -z $SERVICES_LIST ]; then
+	printq "Service $SERVICE could not be found."
 	exit 0
 fi
 
@@ -64,22 +94,22 @@ for unit in "${SERVICES_LIST[@]}"; do
 	if [ "$RESTART" = true ]; then
 		START=false
 		STOP=false
-		echo "Restarting $unit..."
+		printq "Restarting $unit..."
 		sudo systemctl restart --no-pager $unit
 	fi
 
 	if [ "$STOP" = true ]; then
-		echo "Stopping $unit..."
+		printq "Stopping $unit..."
 		sudo systemctl stop --no-pager $unit
 	fi
 
 	if [ "$START" = true ]; then
-		echo "Starting $unit..."
+		printq "Starting $unit..."
 		sudo systemctl start --no-pager $unit
 	fi
 
 	if [ "$STATUS" = true ]; then
-		# echo "Gathering status for $unit."
+		# printq "Gathering status for $unit."
 		sudo systemctl status --no-pager $unit
 	fi
 done
